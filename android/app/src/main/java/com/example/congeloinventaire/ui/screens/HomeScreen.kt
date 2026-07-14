@@ -1,5 +1,6 @@
 package com.example.congeloinventaire.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +33,7 @@ fun HomeScreen(
     onNavigateToRecipes: () -> Unit
 ) {
     val inventory by viewModel.inventory.collectAsState()
+    val isServerOnline by viewModel.isServerOnline.collectAsState()
     
     // Statistiques rapides
     val totalItems = inventory.size
@@ -62,6 +64,20 @@ fun HomeScreen(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        AnimatedVisibility(visible = !isServerOnline) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            ) {
+                Text(
+                    text = "Mode Hors-Ligne - Serveur introuvable",
+                    color = Color(0xFFC62828),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
         Text(
             text = "À Givre Ouvert",
             fontSize = 32.sp,
@@ -118,6 +134,7 @@ fun HomeScreen(
                     icon = Icons.Filled.Add,
                     color = Color(0xFFE8F5E9),
                     iconColor = Color(0xFF2E7D32),
+                    enabled = isServerOnline,
                     onClick = { onNavigateToScanner(true) }
                 )
                 DashboardCard(
@@ -126,6 +143,7 @@ fun HomeScreen(
                     icon = Icons.Filled.Remove,
                     color = Color(0xFFFFEBEE),
                     iconColor = Color(0xFFC62828),
+                    enabled = isServerOnline,
                     onClick = { onNavigateToScanner(false) }
                 )
             }
@@ -147,6 +165,7 @@ fun HomeScreen(
                     icon = Icons.Filled.Restaurant,
                     color = Color(0xFFFFF3E0),
                     iconColor = Color(0xFFEF6C00),
+                    enabled = isServerOnline,
                     onClick = {
                         viewModel.loadRecipes()
                         onNavigateToRecipes()
@@ -164,13 +183,15 @@ fun DashboardCard(
     icon: ImageVector,
     color: Color,
     iconColor: Color,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    val alpha = if (enabled) 1f else 0.5f
     Card(
         modifier = modifier
             .height(140.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = color),
+            .clickable(enabled = enabled, onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = alpha)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(24.dp)
     ) {
@@ -182,12 +203,12 @@ fun DashboardCard(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = iconColor,
+                tint = iconColor.copy(alpha = alpha),
                 modifier = Modifier.size(48.dp).padding(bottom = 8.dp)
             )
             Text(
                 text = title,
-                color = iconColor,
+                color = iconColor.copy(alpha = alpha),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )

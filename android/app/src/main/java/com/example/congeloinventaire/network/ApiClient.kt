@@ -10,6 +10,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import java.util.concurrent.TimeUnit
 
 // --- DATA CLASSES ---
 
@@ -76,6 +77,9 @@ object ApiClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(2, TimeUnit.SECONDS)
+        .writeTimeout(2, TimeUnit.SECONDS)
         .build()
 
     val service: CongeloApiService by lazy {

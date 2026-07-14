@@ -35,6 +35,7 @@ fun InventoryScreen(
     onNavigateBack: () -> Unit
 ) {
     val inventory by viewModel.inventory.collectAsState()
+    val isServerOnline by viewModel.isServerOnline.collectAsState()
 
     Scaffold(
         topBar = {
@@ -64,6 +65,7 @@ fun InventoryScreen(
                     InventoryItemCard(
                         item = item,
                         index = index,
+                        isServerOnline = isServerOnline,
                         onDelete = { item.id?.let { viewModel.removeItem(it) } }
                     )
                 }
@@ -74,7 +76,7 @@ fun InventoryScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun InventoryItemCard(item: InventoryItem, index: Int = 0, onDelete: () -> Unit) {
+fun InventoryItemCard(item: InventoryItem, index: Int = 0, isServerOnline: Boolean = true, onDelete: () -> Unit) {
     val backgroundColor = if (index % 2 == 0) Color.White else Color(0xFFE3F2FD) // Bleu clair alternatif
     
     // Calcul de la couleur en fonction de l'âge
@@ -131,7 +133,7 @@ fun InventoryItemCard(item: InventoryItem, index: Int = 0, onDelete: () -> Unit)
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {},
-                onLongClick = { showDialog = true }
+                onLongClick = { if (isServerOnline) showDialog = true }
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
