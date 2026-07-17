@@ -77,8 +77,10 @@ object ApiClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        // Une connexion impossible doit être détectée rapidement, mais Gemini peut
+        // prendre plusieurs secondes avant d'envoyer les suggestions de recettes.
         .connectTimeout(2, TimeUnit.SECONDS)
-        .readTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(2, TimeUnit.SECONDS)
         .build()
 

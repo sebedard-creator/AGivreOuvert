@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,6 +26,9 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _recipes = MutableStateFlow<List<Recipe>>(emptyList())
     val recipes: StateFlow<List<Recipe>> = _recipes.asStateFlow()
+
+    private val _recipesError = MutableStateFlow<String?>(null)
+    val recipesError: StateFlow<String?> = _recipesError.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -76,7 +80,12 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun loadRecipes() {
-        if (!_isServerOnline.value) return // Bloqué si hors ligne
+        if (!_isServerOnline.value) {
+            _recipesError.value = "Impossible de générer des recettes en mode hors ligne."
+            return
+        }
+
+        _recipesError.value = null
         viewModelScope.launch {
             _isLoading.value = true
             try {
@@ -84,6 +93,11 @@ class InventoryViewModel(application: Application) : AndroidViewModel(applicatio
                 _recipes.value = recipeList
             } catch (e: Exception) {
                 e.printStackTrace()
+                _recipesError.value = if (e is SocketTimeoutException) {
+                    "La génération des recettes prend trop de temps. Veuillez réessayer."
+                } else {
+                    "Impossible de charger les recettes. Vérifiez la connexion au serveur puis réessayez."
+                }
             } finally {
                 _isLoading.value = false
             }

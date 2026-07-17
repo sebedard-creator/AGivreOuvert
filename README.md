@@ -1,58 +1,126 @@
 # ❄️ À Givre Ouvert
 
-**À Givre Ouvert** est une application Android moderne doublée d'un backend en Python, conçue pour réinventer la gestion de votre congélateur. Dites adieu au gaspillage alimentaire et bonjour aux recettes créatives générées par intelligence artificielle !
+**À Givre Ouvert** est une application Android accompagnée d’un backend Python local pour inventorier le contenu d’un congélateur, appliquer une rotation FIFO et générer des idées de recettes anti-gaspillage avec Google Gemini.
 
----
+## Aperçu
 
-## ✨ Fonctionnalités Principales
+L’interface en mode sombre présente l’état du congélateur d’un coup d’œil et les ingrédients manquants directement dans l’aperçu des recettes.
 
-### 📸 Scanner Intelligent Intégré
-- **Lecture de code-barres hors-ligne** grâce à la technologie Google ML Kit (rapide, sans latence).
-- Interrogation de la gigantesque base de données publique **Open Food Facts** pour identifier instantanément les produits scannés.
-- **Mémorisation intelligente** : Si vous scannez un produit inconnu et lui donnez un nom manuellement, l'application le retient dans son dictionnaire local pour les prochaines fois.
+| Accueil et suivi de fraîcheur | Suggestions de recettes |
+|:---:|:---:|
+| <img src="./screenshot_2.png" alt="Accueil avec résumé de l’inventaire et actions de scan" width="360"> | <img src="./screenshot_1.png" alt="Liste de recettes avec ingrédients utilisés et ingrédients manquants" width="360"> |
 
-### 📦 Gestion d'Inventaire FIFO (First In, First Out)
-- Les produits sont gérés sous forme de **lots uniques**.
-- Code couleur intuitif basé sur l'âge du produit pour identifier d'un coup d'œil ce qui doit être consommé :
-  - 🟢 **Vert** : Moins de 30 jours
-  - 🟡 **Jaune** : Entre 30 et 90 jours
-  - 🔴 **Rouge** : Plus de 90 jours
+## Fonctionnalités
 
-### 🧑‍🍳 Générateur de Recettes Anti-Gaspillage (IA)
-- Un bouton magique qui analyse l'état de votre congélateur.
-- Le backend sélectionne les **15 produits les plus anciens** et en tire **10 au hasard** pour éviter la répétition.
-- Ces ingrédients sont envoyés à **Google Gemini (flash-lite)** qui se transforme en véritable chef cuisinier pour vous proposer 10 idées de recettes originales, rapides, et spécifiquement conçues pour écouler vos vieux stocks de façon délicieuse.
+### Scanner de codes-barres
 
----
+- Lecture locale des codes-barres avec CameraX et Google ML Kit.
+- Recherche du produit auprès du backend, du dictionnaire local puis d’Open Food Facts.
+- Saisie manuelle lorsqu’un produit est inconnu.
+- Mémorisation du nom personnalisé pour les scans suivants.
+- Ajout d’un lot ou retrait automatique du lot le plus ancien.
 
-## 🛠️ Stack Technique
+La lecture visuelle du code-barres est locale, mais l’identification et la modification de l’inventaire nécessitent que le backend soit accessible.
 
-### Frontend (Application Mobile)
-- **Android** natif développé en **Kotlin**.
-- Interface utilisateur 100% **Jetpack Compose** (UI moderne, zébrages alternés, design ergonomique).
-- Communication HTTP asynchrone via **Retrofit**.
-- Architecture robuste **MVVM** (Model-View-ViewModel) gérant les flux d'états réactifs (StateFlow).
+### Inventaire FIFO
 
-### Backend (Serveur Maison)
-- **Python** propulsé par **FastAPI** (performant et asynchrone).
-- Base de données locale **SQLite** orchestrée par l'ORM **SQLModel**.
-- Requêtes HTTP vers l'extérieur (Open Food Facts & Gemini) gérées avec **HTTPX**.
+- Un produit ajouté correspond à un lot individuel.
+- Tri du plus ancien au plus récent.
+- Indicateurs d’âge :
+  - récent : 30 jours ou moins;
+  - à surveiller : de 31 à 90 jours;
+  - ancien : plus de 90 jours.
+- Retrait explicite depuis la liste avec confirmation.
+- Copie locale en lecture seule du dernier inventaire synchronisé lorsque le serveur est inaccessible.
 
----
+### Recettes anti-gaspillage
 
-## 🚀 Installation & Démarrage rapide
+- Sélection des 15 lots les plus anciens.
+- Échantillon aléatoire de 10 lots lorsqu’il y en a plus de 10.
+- Génération de 10 suggestions avec `gemini-flash-lite-latest`.
+- Affichage de l’ingrédient ciblé et des ingrédients frais manquants directement dans l’aperçu.
+- Détails repliables pour les ingrédients et la préparation.
+- Gestion distincte du chargement, d’un inventaire vide et des erreurs réseau.
 
-1. **Backend** : 
-   - Créez et activez l'environnement virtuel Python.
-   - Installez les dépendances : `pip install -r requirements.txt`.
-   - Lancez le serveur : `uvicorn app.main:app --host 0.0.0.0 --port 8096`.
-2. **Configuration** :
-   - Ajoutez votre clé d'API Google Gemini dans le fichier `backend/.env` (variable `GEMINI_API_KEY`).
-3. **Android** :
-   - Ouvrez le projet dans Android Studio.
-   - Modifiez le fichier `local.properties` pour pointer vers l'adresse IP locale de votre ordinateur (ex: `BACKEND_IP="192.168.1.XX"`).
-   - Compilez et lancez sur votre smartphone physique !
+### Interface Android
 
----
+- Jetpack Compose et Material 3.
+- Thème personnalisé bleu glacier, turquoise et corail, avec modes clair et sombre.
+- Navigation inférieure entre Accueil, Inventaire et Recettes.
+- Accueil avec résumé de fraîcheur et actions de scan.
+- Scanner avec cadre de visée et résultat présenté dans une feuille ancrée en bas.
+
+## Stack technique
+
+### Android
+
+- Kotlin et Jetpack Compose
+- Material 3
+- Navigation Compose
+- ViewModel et StateFlow
+- Retrofit, OkHttp et Gson
+- CameraX et ML Kit Barcode Scanning
+
+### Backend
+
+- Python et FastAPI
+- SQLite et SQLModel
+- HTTPX pour Open Food Facts
+- SDK `google-genai` pour Gemini
+- Variables d’environnement chargées avec `python-dotenv`
+
+## Installation
+
+### 1. Backend
+
+Depuis la racine du dépôt :
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+Copier `backend/.env.example` vers `backend/.env`, puis renseigner :
+
+```dotenv
+GEMINI_API_KEY=votre_cle
+```
+
+Lancer ensuite le serveur depuis le dossier `backend` :
+
+```powershell
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8096
+```
+
+Le fichier `inventory.db` est créé dans le dossier de travail du backend.
+
+### 2. Application Android
+
+Ouvrir le dossier `android` dans Android Studio et ajouter l’adresse du serveur à `android/local.properties` :
+
+```properties
+BACKEND_IP=192.168.1.30
+```
+
+Le téléphone et le serveur doivent se trouver sur un réseau permettant une connexion vers le port `8096`.
+
+### 3. Compilation
+
+Compiler et installer l’application depuis Android Studio. La compilation de développement peut aussi être lancée avec :
+
+```powershell
+cd android
+.\gradlew.bat :app:assembleDebug
+```
+
+## État du projet
+
+- La compilation `debug` est validée.
+- Aucun test automatisé n’est actuellement présent dans le dépôt.
+- Une validation manuelle sur téléphone demeure recommandée pour la caméra, les permissions et les différentes tailles d’écran.
+
+Pour les détails techniques, consulter [architecture.md](architecture.md). L’historique se trouve dans [changelog.md](changelog.md).
 
 *Conçu par Sébastien Bédard*

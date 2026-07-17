@@ -1,72 +1,150 @@
 package com.example.congeloinventaire.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.congeloinventaire.network.InventoryItem
 import com.example.congeloinventaire.viewmodel.InventoryViewModel
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryScreen(
     viewModel: InventoryViewModel,
-    onNavigateBack: () -> Unit
+    onAddItem: () -> Unit
 ) {
     val inventory by viewModel.inventory.collectAsState()
     val isServerOnline by viewModel.isServerOnline.collectAsState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("Inventaire") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                }
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
+        },
+        floatingActionButton = {
+            if (isServerOnline) {
+                ExtendedFloatingActionButton(
+                    onClick = onAddItem,
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("Ajouter") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     ) { padding ->
         if (inventory.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Votre congélateur est vide.", color = Color.Black)
-            }
+            EmptyInventory(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                canAdd = isServerOnline,
+                onAddItem = onAddItem
+            )
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(inventory) { index, item ->
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "${inventory.size} produit${if (inventory.size > 1) "s" else ""}",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "Du plus ancien au plus récent",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!isServerOnline) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.errorContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Filled.CloudOff,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        "Hors ligne",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                items(items = inventory, key = { it.id ?: "${it.upc}-${it.date_added}-${it.name}" }) { item ->
                     InventoryItemCard(
                         item = item,
-                        index = index,
                         isServerOnline = isServerOnline,
-                        onDelete = { item.id?.let { viewModel.removeItem(it) } }
+                        onDelete = { item.id?.let(viewModel::removeItem) }
                     )
                 }
             }
@@ -74,34 +152,79 @@ fun InventoryScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun InventoryItemCard(item: InventoryItem, index: Int = 0, isServerOnline: Boolean = true, onDelete: () -> Unit) {
-    val backgroundColor = if (index % 2 == 0) Color.White else Color(0xFFE3F2FD) // Bleu clair alternatif
-    
-    // Calcul de la couleur en fonction de l'âge
-    var color = Color(0xFF4CAF50) // Vert
-    var ageText = "Récent"
-    
-    try {
-        val dateAdded = LocalDate.parse(item.date_added)
-        val daysOld = ChronoUnit.DAYS.between(dateAdded, LocalDate.now())
-        when {
-            daysOld <= 30 -> {
-                color = Color(0xFF4CAF50)
-                ageText = "$daysOld j."
-            }
-            daysOld <= 90 -> {
-                color = Color(0xFFFFC107)
-                ageText = "$daysOld j."
-            }
-            else -> {
-                color = Color(0xFFF44336)
-                ageText = "$daysOld j."
+private fun EmptyInventory(
+    modifier: Modifier,
+    canAdd: Boolean,
+    onAddItem: () -> Unit
+) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Filled.Inventory,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(40.dp)
+                )
             }
         }
-    } catch (e: Exception) {
-        // Ignorer si la date est invalide
+        Text(
+            text = "Le congélateur est vide",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(top = 20.dp)
+        )
+        Text(
+            text = "Scannez un produit pour commencer à suivre votre inventaire.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)
+        )
+        if (canAdd) {
+            TextButton(onClick = onAddItem) {
+                Text("Ajouter un produit")
+            }
+        }
+    }
+}
+
+@Composable
+fun InventoryItemCard(
+    item: InventoryItem,
+    isServerOnline: Boolean = true,
+    onDelete: () -> Unit
+) {
+    val dateAdded = runCatching { LocalDate.parse(item.date_added) }.getOrNull()
+    val daysOld = dateAdded?.let { ChronoUnit.DAYS.between(it, LocalDate.now()).coerceAtLeast(0) }
+    val formattedDate = dateAdded?.format(
+        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.CANADA_FRENCH)
+    ) ?: item.date_added
+
+    val status = when {
+        daysOld == null || daysOld <= 30 -> AgeStatus(
+            label = daysOld?.let { "$it j · récent" } ?: "Récent",
+            color = MaterialTheme.colorScheme.secondary,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+        daysOld <= 90 -> AgeStatus(
+            label = "$daysOld j · à surveiller",
+            color = MaterialTheme.colorScheme.tertiary,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+        else -> AgeStatus(
+            label = "$daysOld j · ancien",
+            color = MaterialTheme.colorScheme.error,
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
     }
 
     var showDialog by remember { mutableStateOf(false) }
@@ -109,71 +232,88 @@ fun InventoryItemCard(item: InventoryItem, index: Int = 0, isServerOnline: Boole
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Supprimer un produit", color = Color.Black) },
-            text = { Text("Voulez-vous vraiment retirer ce produit de l'inventaire ?", color = Color.Black) },
+            icon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+            title = { Text("Retirer ce produit ?") },
+            text = { Text("${item.name} sera retiré de l’inventaire.") },
             confirmButton = {
-                TextButton(onClick = { 
-                    showDialog = false
-                    onDelete() 
-                }) {
-                    Text("Supprimer", color = Color.Red)
+                TextButton(
+                    onClick = {
+                        showDialog = false
+                        onDelete()
+                    }
+                ) {
+                    Text("Retirer", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Annuler", color = Color.Black)
+                    Text("Annuler")
                 }
-            },
-            containerColor = Color.White
+            }
         )
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {},
-                onLongClick = { if (isServerOnline) showDialog = true }
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Indicateur de couleur
             Box(
                 modifier = Modifier
-                    .size(16.dp)
-                    .background(color, RoundedCornerShape(8.dp))
+                    .size(10.dp)
+                    .background(status.color, CircleShape)
             )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Row(
+                    modifier = Modifier.padding(top = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = status.containerColor
+                    ) {
+                        Text(
+                            text = status.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = status.color,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = ageText,
-                    fontWeight = FontWeight.Medium,
-                    color = color
+            IconButton(
+                onClick = { showDialog = true },
+                enabled = isServerOnline,
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 )
-                Text(
-                    text = item.date_added,
-                    fontSize = 12.sp,
-                    color = Color.Black
-                )
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = "Retirer ${item.name}")
             }
         }
     }
 }
+
+private data class AgeStatus(
+    val label: String,
+    val color: Color,
+    val containerColor: Color
+)
